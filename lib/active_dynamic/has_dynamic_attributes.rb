@@ -14,14 +14,14 @@ module ActiveDynamic
     class_methods do
       def where_dynamic(options)
         query = joins(:active_dynamic_attributes)
-        
+
         options.each do |prop, value|
           query = query.where(active_dynamic_attributes: {
             name: prop,
             value: value
           })
         end
-        
+
         query
       end
     end
@@ -128,7 +128,15 @@ module ActiveDynamic
     def save_dynamic_attributes
       dynamic_attributes.each do |field|
         next unless _custom_fields[field.name]
-        attr = active_dynamic_attributes.find_or_initialize_by(field.as_json)
+        field_hash = case field
+        when AttributeDefinition
+          field.as_json
+        when Attribute
+          ActiveDynamic::Attribute.columns.map do |column|
+            [column.name, field.send(column.name.to_sym)]
+          end.to_h
+        end
+        attr = active_dynamic_attributes.find_or_initialize_by(field_hash)
         if persisted?
           attr.update(value: _custom_fields[field.name])
         else
